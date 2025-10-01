@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=Edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>3D Learn</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <table id="coordinates" border="0">
+    <tr>
+      <td>x:</td>
+      <td id="xCoord"></td>
+      <td>y:</td>
+      <td id="yCoord"></td>
+      <td>z:</td>
+      <td id="zCoord"></td>
+    </tr>
+    <tr>
+      <td>vx</td>
+      <td id="xVect"></td>
+      <td>vy</td>
+      <td id="yVect"></td>
+      <td>vz</td>
+      <td id="zVect"></td>
+    </tr>
+    <tr>
+      <td>ang:</td>
+      <td id="ang"></td>
+    </tr>
+  </table>
+  <center>
+    <section id="canv">
+      <svg width="31" height="31" title="plein-ecran">
+      <g fill="none" stroke="purple" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" transform="translate(3 3), scale(0.5 0.5)">
+        <path d="M15 0 L0 0 0 15"></path>
+        <path d="M35 0 L50 0 50 15"></path>
+        <path d="M0 35 L0 50 15 50"></path>
+        <path d="M35 50 L50 50 50 35"></path>
+      </g>
+      </svg>
+      <canvas width="800" height="800">
+      </canvas>
+    </section>
+  </center>
+  <script src="main.js"></script>
+</body>
+
+</html>

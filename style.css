@@ -1,0 +1,33 @@
+body {
+    font-size: 15pt;
+    background-color: grey;
+}
+
+canvas{
+    border: 2px solid #000;
+    background-color: aqua;
+}
+
+table#coordinates{
+    border-collapse: collapse;
+    min-width: 50vw;
+    font-size: 1vw;
+    margin: auto;
+    text-align: center;
+}
+
+#canv > svg{
+    position: absolute;
+    top: 10px;
+    left: 10px;
+}
+
+#canv{
+    position: relative;
+    width: max-content;
+    height: max-content;
+}
+
+td{
+    height: 30px;
+}
