@@ -47,6 +47,12 @@ class Point {
         this.z = z;
     }
 
+    equals(other) {
+        if (!(other instanceof Point)) return false;
+        if (other.x != this.x || other.y != this.y || this.z != other.z) return false;
+        return true;
+    }
+
     toString() {
         return "Point (" + this.x + ", " + this.y + ", " + this.z + ")";
     }
@@ -85,6 +91,7 @@ class MathSurface {
         this.vect = vect;
     }
     divideSurface(surface = new Surface()) {
+        this.vect = this.vect.unit;
         let upPoints = [];
         let downPoints = [];
         if (!surface.initialised) surface.getAllPoints();
@@ -93,21 +100,26 @@ class MathSurface {
             oldDown = false;
 
         // taking up points and down points
-        for (const point of points.concat([points[0]])) {
+        for (let i = 0; i < points.concat([points[0]]).length; i++) {
+            const point = points.concat([points[0]])[i];
             let ab = pointsToVect(this.a, point);
             let p = vectScal(ab, this.vect);
             if (p > 0) {
                 if (oldDown) {
-                    upPoints.push(vectTrans(this.a, vectSub(ab, this.vect.normed(p))));
-                    downPoints.push(vectTrans(this.a, vectSub(ab, this.vect.normed(p))));
+                    let am = vectScal(ab, this.vect);
+                    let h = am / vectScal(this.vect, pointsToVect(point, points.concat([points[0]])[i - 1]).unit);
+                    upPoints.push(vectTrans(this.a, vectSum(ab, pointsToVect(point, points.concat([points[0]])[i - 1]).unit.normed(Math.abs(h)))));
+                    downPoints.push(vectTrans(this.a, vectSum(ab, pointsToVect(point, points.concat([points[0]])[i - 1]).unit.normed(Math.abs(h)))));
                 }
                 upPoints.push(point);
                 oldUp = true;
                 oldDown = false;
             } else if (p < 0) {
                 if (oldUp) {
-                    upPoints.push(vectTrans(this.a, vectSub(ab, this.vect.normed(p))));
-                    downPoints.push(vectTrans(this.a, vectSub(ab, this.vect.normed(p))));
+                    let am = vectScal(ab, this.vect);
+                    let h = am / vectScal(this.vect, pointsToVect(point, points.concat([points[0]])[i - 1]).unit);
+                    upPoints.push(vectTrans(this.a, vectSum(ab, pointsToVect(point, points.concat([points[0]])[i - 1]).unit.normed(Math.abs(h)))));
+                    downPoints.push(vectTrans(this.a, vectSum(ab, pointsToVect(point, points.concat([points[0]])[i - 1]).unit.normed(Math.abs(h)))));
                 }
                 downPoints.push(point);
                 oldUp = false;
@@ -267,7 +279,10 @@ class Surface {
         this.vectors = [];
         this.stroke = "black";
         this.initialised = false;
-        this.points = [newPoint()];
+        this.pointsModify = false;
+        this.canCollision = false;
+        this.checkedCollision = false;
+        this.subSurfaces = this.points = [newPoint()];
     }
     cent() {
         if (this.center == undefined) return false;
@@ -303,7 +318,7 @@ class Surface {
         let lastInScreenPoint = newPoint();
         let lastOutScreenPoint = newPoint();
         paint.beginPath();
-        if (!this.initialised || this instanceof InfiniteFlatSurface) this.getAllPoints();
+        if (!this.initialised || this.pointsModify) this.getAllPoints();
         for (const point of this.points) {
             if (vectScal(camPos.direction.unit, pointsToVect(camPos.p, point)) < camPos.screen - decalage) {
                 outScreen = true;
@@ -443,10 +458,40 @@ function SurfacePoint(color = ["blue", "red"], points = [newPoint()]) {
         vects.push(pointsToVect(predPoint, point));
         predPoint = point;
     }
-    if (predPoint != a) vects.push(pointsToVect(predPoint, a));
+    if (!predPoint.equals(a)) vects.push(pointsToVect(predPoint, a));
     let surface = new SurfaceLine(a, color);
     surface.vectors = vects;
     return surface;
+}
+
+function surfaceCollision(s1 = new SurfaceLine(), s2 = new SurfaceLine()) {
+    if (!s1.initialised) s1.getAllPoints();
+    if (!s2.initialised) s2.getAllPoints();
+    const o = s1.points[0],
+        u = pointsToVect(o, s1.points[1]),
+        v = pointsToVect(o, s1.points[s1.points.length - 1]);
+    for (let j = 0; j < s2.points.length; j++) {
+        const pt1 = s2.points[j],
+            pt2 = s2.points[(j + 1) % s2.points.length];
+        if (vectScal(pointsToVect(o, pt1), s1.vect) * vectScal(pointsToVect(o, pt2), s1.vect) < 0) {
+            let am = vectScal(pointsToVect(o, pt1), s1.vect);
+            let h = am / vectScal(pointsToVect(pt1, pt2).unit, s1.vect);
+            let pt3 = vectTrans(pt1, pointsToVect(pt1, pt2).unit.normed(Math.abs(h)));
+            let p = projectVector([u, v], pointsToVect(o, pt3));
+            if (p.x >= 0 && p.y >= 0 && p.x <= u.norm && p.y <= v.norm) {
+                return true;
+            }
+            break;
+        }
+    }
+    return false;
+}
+
+function getDivided(mSurface = new MathSurface(), surface = new Surface()) {
+    let sPoints = mSurface.divideSurface(surface);
+    return sPoints.map((pts) => {
+        return new SurfacePoint(surface.color, pts);
+    });
 }
 
 class SurfaceRect extends SurfaceLine {
@@ -556,6 +601,7 @@ class InfiniteFlatSurface extends Surface {
         this.len = 5000;
         this.vectFromPos = vectFromPos;
         this.type = "infiniteSurface";
+        this.pointsModify = true;
     }
     *givePoints() {
         let vectY = camPos.direction;
@@ -778,6 +824,33 @@ class World3d {
                 this.surfaces = this.surfaces.concat(v.draw());
             }
         });
+        // Check the collision
+        let final = [];
+        for (let i = 0; i < this.surfaces.length; i++) {
+            const surface = this.surfaces[i];
+            if (!surface.canCollision) {
+                final.push(surface);
+                continue;
+            }
+            let collided = false;
+            for (let j = i + 1; j < this.surfaces.length; j++) {
+                const surface2 = this.surfaces[j];
+                if (!surface2.canCollision || surface2 == surface) continue;
+                let div = surfaceCollision(surface, surface2);
+                if (!div) continue;
+                collided = true;
+                let mSurface = new MathSurface(surface.points[0], surface.vect);
+                final = getDivided(mSurface, surface2);
+
+                mSurface.a = surface2.points[0];
+                mSurface.vect = surface2.vect;
+                final = final.concat(getDivided(mSurface, surface));
+            }
+            if (!collided) final.push(surface);
+        }
+
+        this.surfaces = final;
+
         this.surfaces.sort((a, b) => {
             let d = b.distance - a.distance;
             if (Math.abs(d) < 10) d = d;
@@ -940,34 +1013,6 @@ function vectTrans(a = newPoint(), ...vectors) {
         a = newPoint(a.x + u.x, a.y + u.y, a.z + u.z);
     }
     return a;
-}
-
-function drawEllipse(a = newPoint(), b = newPoint(), c = newPoint(), d = newPoint()) {
-    let points = [a, b, c, d];
-    let minX = a.x;
-    let minY = a.y;
-    let maxX = a.x;
-    let maxY = a.y;
-    for (let i = 0; i < points.length; i++) {
-        let pt = points[i];
-        minX = pt.x < minX ? pt.x : minX;
-        maxX = pt.x > maxX ? pt.x : maxX;
-        minY = pt.y < minY ? pt.y : minY;
-        maxY = pt.y > maxY ? pt.y : maxY;
-    }
-}
-
-function drawCicle(o = newPoint(), radiusX = 0, radiusY = -1, startAngle = 0, endAngle = 2 * pi, rotate = 0) {
-    let p = newPoint();
-    p = rotatePoint(o, newPoint(o.x + Math.cos(startAngle) * radiusX, o.y + Math.sin(startAngle) * radiusY), rotate);
-    paint.moveTo(p.x, p.y);
-    radiusY = radiusY != -1 ? radiusY : radiusX;
-    let ang = 0;
-    for (let i = 0; i < 1000 * radiusX; i++) {
-        ang = ((endAngle - startAngle) * i) / (1000 * radiusX) + startAngle;
-        p = rotatePoint(o, newPoint(o.x + Math.cos(ang) * radiusX, o.y + Math.sin(ang) * radiusY), rotate);
-        paint.lineTo(p.x, p.y);
-    }
 }
 
 function rotatePoint(o = newPoint(), a = newPoint(), angle = 0, base = [newVect(), newVect()]) {
@@ -1300,10 +1345,6 @@ var poly = new Polygone(newPoint(200, 0, world3D.reference + 100), 11, 100, newV
 var poly2 = new Polygone(newPoint(200, 200, world3D.reference + 100), 11, 100, newVect(0, 1, 0), ["orange", "purple"]);
 var colPoly = new SurfaceJoinObject(poly, poly2, [["tan", "yellow"]]);
 
-// Test des surfaces découpés
-var div = new SurfaceDivided(newPoint(200, 300, world3D.reference + 100), 10, 10, 100, 100, newVect(0, 1));
-var div2 = new SurfaceDivided(newPoint(150, 350, world3D.reference + 150), 10, 10, 100, 100, newVect(-1), [newColTab(0, ["green", "yellow"])]);
-
 // Construction d'une petite maison
 let ref = world3D.reference;
 let d0 = new SurfaceRect(newPoint(100, 100, 350 + ref), ["dodgerblue", "dodgerblue"], newVect(25).normed(5), newVect(0, 0, -70).normed(5)),
@@ -1337,12 +1378,6 @@ let murDroit = new SurfaceRect(newPoint(1100, 100, 500 + ref), ["lime", "lime"],
 world3D.floor = new InfiniteFlatSurface(newPoint(200, 500, 0));
 //world3D.addObject(devant, murGauche, murDroit, derriere);
 //world3D.addObject(poly, poly2, colPoly);
-let mr1 = new SurfaceDivided(newPoint(100, 100, ref + 1000), 5, 1, 1000, 1000, newVect(0, 1, 0));
-let mr2 = new SurfaceDivided(newPoint(50, 50, ref + 1000), 5, 1, 1000, 1000, newVect(1, 0, 0), [
-    newColTab(2, ["green", "green"]),
-    newColTab(2, ["red", "red"]),
-    newColTab(1, ["yellow", "yellow"]),
-]);
 
 let sPoint = new SurfaceLine(
     newPoint(100, 100, ref + 100),
@@ -1356,6 +1391,12 @@ let sPoint = new SurfaceLine(
     newVect(-100),
     newVect(0, 0, 100)
 );
+let s = new SurfaceRect(newPoint(100, 150, ref + 50), ["red", "red"], newVect(100), newVect(0, -100));
+let s2 = new SurfaceRect(newPoint(100, 100, ref + 100), ["blue", "blue"], newVect(100), newVect(0, 0, -100));
+let msur = new MathSurface(newPoint(100, 100, ref + 70), newVect(1, 0, 1));
+
+sPoint.canCollision = true;
+s.canCollision = true;
 
 function* easeOut(n = 2) {
     if (n < 2) n = 2;
@@ -1395,17 +1436,6 @@ let drawing = setInterval(() => {
     nextFrameFuncs = [];
     reDraw();
 }, 20);
-let mSuface = new MathSurface(newPoint(100, 100, ref + 50), newVect(0, 0, 1));
 
-let divided = mSuface.divideSurface(sPoint),
-    colors = [
-        ["green", "green"],
-        ["red", "red"],
-        ["yellow", "yellow"],
-    ];
-console.log(divided);
-
-for (let i = 0; i < divided.length; i++) {
-    const surface = divided[i];
-    world3D.addObject(new SurfacePoint(colors[i], surface));
-}
+world3D.addObject(getDivided(msur, sPoint)[2]);
+console.log(getDivided(msur, s));
