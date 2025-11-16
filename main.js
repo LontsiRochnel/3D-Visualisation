@@ -7,6 +7,7 @@ console.log("Demarrage");
 
 paint.translate(can.width / 2, can.height / 2);
 let decalage = 1000; // distance d'un object après l'écran avant d'être effacé
+
 const movePx = 10;
 // ---Classes---
 
@@ -19,13 +20,13 @@ class ColTab {
      * @param {number} num Nombre de fois successifs que cette couleur va s'appliquer
      * @param {string[]} color Les deux couleurs proprement dites
      */
-    constructor(num, color = ["dodgerblue", "pink"]) {
+    constructor(num, color = ["white", "dodgerblue"]) {
         this.num = num;
         this.color = color;
     }
 }
 
-function newColTab(num = 0, color = ["dodgerblue", "pink"]) {
+function newColTab(num = 0, color = ["white", "dodgerblue"]) {
     return new ColTab(num, color);
 }
 /**
@@ -490,6 +491,18 @@ function getDivided(mSurface = new MathSurface(), surface = new Surface()) {
     return sPoints.map((pts) => {
         if (pts.length > 3) return new SurfacePoint(surface.color, pts);
     });
+}
+
+function divideWithSurface(s1 = new Surface(), s2 = new Surface()) {
+    let mSurface = new MathSurface();
+    if (s1 instanceof SurfaceDivided) {
+        mSurface.a = s1.a;
+        mSurface.vect = s1.vect;
+    } else {
+        mSurface.a = s1.a;
+        mSurface.vect = s1.vect;
+    }
+    return getDivided(mSurface, s2);
 }
 
 class SurfaceRect extends SurfaceLine {
@@ -1103,7 +1116,7 @@ var camPos = {
     p: newPoint(200, 1000, 200),
     direction: newVect(0, 1, 0),
     base: [newVect(1, 0, 0), newVect(0, 0, 1)],
-    screen: decalage + 10,
+    screen: decalage + 100,
     angZ: 0,
     angX: 0,
 };
@@ -1347,34 +1360,8 @@ var colPoly = new SurfaceJoinObject(poly, poly2, [["tan", "yellow"]]);
 
 // Construction d'une petite maison
 let ref = world3D.reference;
-let d0 = new SurfaceRect(newPoint(100, 100, 350 + ref), ["dodgerblue", "dodgerblue"], newVect(25).normed(5), newVect(0, 0, -70).normed(5)),
-    d3 = new SurfaceRect(newPoint(475, 100, 350 + ref), ["dodgerblue", "dodgerblue"], newVect(60).normed(5), newVect(0, 0, -70).normed(5)),
-    d4 = new SurfaceRect(newPoint(775, 100, 350 + ref), ["dodgerblue", "dodgerblue"], newVect(65).normed(5), newVect(0, 0, -70).normed(5)),
-    d1 = new SurfaceRect(newPoint(100, 100, 500 + ref), ["dodgerblue", "dodgerblue"], newVect(200).normed(5), newVect(0, 0, -30).normed(5)),
-    d2 = new SurfaceLine(
-        newPoint(100, 100, 500 + ref),
-        ["dodgerblue", "dodgerblue"],
-        newVect(100, 0, 50).normed(5),
-        newVect(100, 0, -50).normed(5),
-        newVect(-200).normed(5)
-    );
 
-let devant = new SurfaceObject(d0, d1, d2, d3, d4);
-devant.stroke = "dodgerblue";
-
-let derriere = new SurfaceLine(
-    newPoint(100, 1100, ref),
-    ["red", "red"],
-    newVect(0, 0, 100).normed(5),
-    newVect(100, 0, 50).normed(5),
-    newVect(100, 0, -50).normed(5),
-    newVect(0, 0, -100).normed(5),
-    newVect(-200).normed(5)
-);
 world3D.floor = new InfiniteFlatSurface(newPoint(200, 500, 0));
-//world3D.addObject(devant, murGauche, murDroit, derriere);
-//world3D.addObject(poly, poly2, colPoly);
-
 
 function* easeOut(n = 2) {
     if (n < 2) n = 2;
@@ -1415,3 +1402,54 @@ let drawing = setInterval(() => {
     reDraw();
 }, 20);
 
+// Constructing my house
+
+let murGauche = new SurfaceDivided(newPoint(100, 1500, ref + 500), 10, 1, 1500, 500, newVect(-1));
+let derriere = new SurfaceDivided(newPoint(1100, 1500, ref + 900), 2, 1, 1000, 900, newVect(0, 1));
+let murDroit = new SurfaceDivided(newPoint(1100, 0, ref + 500), 10, 1, 1500, 500, newVect(1));
+let devantGauche = new SurfaceRect(newPoint(100, 0, ref + 800), ["white", "white"], newVect(300), newVect(0, 0, -800));
+let devantDroit = new SurfaceRect(newPoint(800, 0, ref + 800), ["white", "white"], newVect(300), newVect(0, 0, -800));
+let devantSup = new SurfaceDivided(newPoint(400, 0, ref + 850), 2, 1, 400, 350, newVect(0, -1));
+let toitGauche = new SurfaceDivided(newPoint(600, 1700, ref + 800), 10, 10, 1900, 700, newVect(-3, 0, 5), [newColTab(0, ["dimgrey", "dimgrey"])]);
+let toitDroit = new SurfaceDivided(newPoint(600, -200, ref + 800), 10, 10, 1900, 700, newVect(3, 0, 5), [newColTab(0, ["dimgrey", "dimgrey"])]);
+let tapis = new SurfaceDivided(newPoint(100, 1500, ref), 5, 5, 1000, 1500, newVect(0, 0, 1), [
+    newColTab(1, ["black", "black"]),
+    newColTab(1, ["white", "white"]),
+    newColTab(1, ["black", "black"]),
+    newColTab(1, ["white", "white"]),
+    newColTab(1, ["black", "black"]),
+    newColTab(1, ["white", "white"]),
+    newColTab(1, ["black", "black"]),
+    newColTab(1, ["white", "white"]),
+    newColTab(1, ["black", "black"]),
+    newColTab(1, ["white", "white"]),
+    newColTab(1, ["black", "black"]),
+    newColTab(1, ["white", "white"]),
+    newColTab(1, ["black", "black"]),
+    newColTab(1, ["white", "white"]),
+    newColTab(1, ["black", "black"]),
+    newColTab(1, ["white", "white"]),
+    newColTab(1, ["black", "black"]),
+    newColTab(1, ["white", "white"]),
+    newColTab(1, ["black", "black"]),
+    newColTab(1, ["white", "white"]),
+    newColTab(1, ["black", "black"]),
+    newColTab(1, ["white", "white"]),
+    newColTab(1, ["black", "black"]),
+    newColTab(1, ["white", "white"]),
+    newColTab(1, ["black", "black"]),
+    newColTab(1, ["white", "white"]),
+]);
+devantGauche = divideWithSurface(toitGauche, devantGauche)[1];
+devantDroit = divideWithSurface(toitDroit, devantDroit)[1];
+devantSup.surfaces[0] = divideWithSurface(toitGauche, devantSup.surfaces[0])[1];
+devantSup.surfaces[1] = divideWithSurface(toitDroit, devantSup.surfaces[1])[1];
+for (let i = 0; i < derriere.surfaces.length; i++) {
+    derriere.surfaces[i];
+    if (i > 0) derriere.surfaces[i] = divideWithSurface(toitGauche, derriere.surfaces[i])[1];
+    else derriere.surfaces[i] = divideWithSurface(toitDroit, derriere.surfaces[i])[1];
+}
+
+let myHouse = new SurfaceObject(murGauche, derriere, murDroit, devantGauche, devantDroit, devantSup, toitGauche, toitDroit, tapis);
+
+world3D.addObject(myHouse);
