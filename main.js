@@ -121,6 +121,11 @@ class MathSurface {
                     upPoints.push(vectTrans(this.a, vectSum(ab, pointsToVect(point, points.concat([points[0]])[i - 1]).unit.normed(Math.abs(h)))));
                     downPoints.push(vectTrans(this.a, vectSum(ab, pointsToVect(point, points.concat([points[0]])[i - 1]).unit.normed(Math.abs(h)))));
                 }
+                if (surface.points[0] == point) {
+                    // It means the top corner is not well placed against the vect of this math surface
+                    this.vect = this.vect.normed(-1);
+                    return this.divideSurface(surface);
+                }
                 downPoints.push(point);
                 oldUp = false;
                 oldDown = true;
@@ -164,13 +169,6 @@ class MathSurface {
             let lastSp = upSurfacesPoints.pop();
             if (lastSp.length > 1) upSurfacesPoints[0].pop();
         }
-        // if (downSurfacesPoints.length > 1) {
-        //     downSurfacesPoints[0] = downSurfacesPoints[0].concat(downSurfacesPoints[downSurfacesPoints.length - 1]);
-        //     let lastSp = downSurfacesPoints.pop();
-        //     console.log(lastSp);
-
-        //     if (lastSp.length > 1) downSurfacesPoints[0].pop();
-        // }
         let treatedSpoints = [];
         let realsSurfacesPoints = [];
         for (let i = 0; i < upSurfacesPoints.length; i++) {
@@ -490,7 +488,7 @@ function surfaceCollision(s1 = new SurfaceLine(), s2 = new SurfaceLine()) {
 function getDivided(mSurface = new MathSurface(), surface = new Surface()) {
     let sPoints = mSurface.divideSurface(surface);
     return sPoints.map((pts) => {
-        return new SurfacePoint(surface.color, pts);
+        if (pts.length > 3) return new SurfacePoint(surface.color, pts);
     });
 }
 
@@ -858,7 +856,9 @@ class World3d {
         });
         this.floor.draw();
         for (let i = 0; i < this.surfaces.length; i++) {
-            this.surfaces[i].draw();
+            try {
+                this.surfaces[i].draw();
+            } catch (e) {}
         }
     }
     addObject(...objects) {
@@ -1371,32 +1371,10 @@ let derriere = new SurfaceLine(
     newVect(0, 0, -100).normed(5),
     newVect(-200).normed(5)
 );
-let murGauche = new SurfaceRect(newPoint(100, 1100, 500 + ref), ["orange", "orange"], newVect(0, -200).normed(5), newVect(0, 0, -100).normed(5));
-let murDroit = new SurfaceRect(newPoint(1100, 100, 500 + ref), ["lime", "lime"], newVect(0, 200).normed(5), newVect(0, 0, -100).normed(5));
-//let toitDroit = new SurfaceRect(newPoint(600, 0, 500 + ref + 250), ["yellow", "yellow"], newVect(100, 0, -50).normed(5), newVect(0, 200 + 200 / 5).normed(5))
-//let toitGauche = new SurfaceRect(newPoint(600, 0, 500 + ref + 250), ["yellow", "yellow"], newVect(-100, 0, -50).normed(5), newVect(0, 200 + 200 / 5).normed(5))
 world3D.floor = new InfiniteFlatSurface(newPoint(200, 500, 0));
 //world3D.addObject(devant, murGauche, murDroit, derriere);
 //world3D.addObject(poly, poly2, colPoly);
 
-let sPoint = new SurfaceLine(
-    newPoint(100, 100, ref + 100),
-    ["lime", "lime"],
-    newVect(25),
-    newVect(0, 0, -75),
-    newVect(50),
-    newVect(0, 0, 75),
-    newVect(25),
-    newVect(0, 0, -100),
-    newVect(-100),
-    newVect(0, 0, 100)
-);
-let s = new SurfaceRect(newPoint(100, 150, ref + 50), ["red", "red"], newVect(100), newVect(0, -100));
-let s2 = new SurfaceRect(newPoint(100, 100, ref + 100), ["blue", "blue"], newVect(100), newVect(0, 0, -100));
-let msur = new MathSurface(newPoint(100, 100, ref + 70), newVect(1, 0, 1));
-
-sPoint.canCollision = true;
-s.canCollision = true;
 
 function* easeOut(n = 2) {
     if (n < 2) n = 2;
@@ -1437,5 +1415,3 @@ let drawing = setInterval(() => {
     reDraw();
 }, 20);
 
-world3D.addObject(getDivided(msur, sPoint)[2]);
-console.log(getDivided(msur, s));
